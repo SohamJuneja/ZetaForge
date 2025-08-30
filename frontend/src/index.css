@@ -1,0 +1,265 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ZetaForge Design System - Cybernetic Forge Aesthetic
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Core Cybernetic Colors */
+    --forge-void: 216 47% 5%; /* #0A0F1A - Deep space background */
+    --forge-surface: 216 35% 8%; /* Slightly lighter surface */
+    --forge-border: 216 25% 12%; /* Border color */
+    
+    /* Neon Accent Colors */
+    --forge-neon-blue: 193 100% 50%; /* #00D1FF - Electric neon blue */
+    --forge-neon-purple: 262 100% 67%; /* #A45BFF - Glowing purple */
+    --forge-neon-cyan: 180 100% 60%; /* Bright cyan accent */
+    
+    /* Text Colors */
+    --forge-text-primary: 0 0% 98%; /* Near white */
+    --forge-text-secondary: 193 50% 80%; /* Light blue tint */
+    --forge-text-muted: 216 15% 60%; /* Muted text */
+    
+    /* Glow Effects */
+    --forge-glow-blue: 193 100% 50% / 0.5; /* Blue glow */
+    --forge-glow-purple: 262 100% 67% / 0.5; /* Purple glow */
+    
+    /* Gradients */
+    --forge-gradient-primary: linear-gradient(135deg, hsl(193 100% 50%), hsl(262 100% 67%));
+    --forge-gradient-surface: linear-gradient(145deg, hsl(216 35% 8%), hsl(216 25% 12%));
+    --forge-gradient-glow: radial-gradient(circle, hsl(193 100% 50% / 0.1), transparent 70%);
+    
+    /* Animations */
+    --forge-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --forge-transition-glow: box-shadow 0.3s ease-in-out;
+    
+    /* Shadows */
+    --forge-shadow-neon: 0 0 20px hsl(var(--forge-neon-blue) / 0.3);
+    --forge-shadow-purple: 0 0 20px hsl(var(--forge-neon-purple) / 0.3);
+    --forge-shadow-deep: 0 10px 40px -10px hsl(0 0% 0% / 0.8);
+
+    /* Standard theme compatibility */
+    --background: var(--forge-void);
+    --foreground: var(--forge-text-primary);
+    --card: var(--forge-surface);
+    --card-foreground: var(--forge-text-primary);
+    --popover: var(--forge-surface);
+    --popover-foreground: var(--forge-text-primary);
+    --primary: var(--forge-neon-blue);
+    --primary-foreground: var(--forge-void);
+    --secondary: var(--forge-surface);
+    --secondary-foreground: var(--forge-text-primary);
+    --muted: var(--forge-border);
+    --muted-foreground: var(--forge-text-muted);
+    --accent: var(--forge-neon-purple);
+    --accent-foreground: var(--forge-text-primary);
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: var(--forge-text-primary);
+    --border: var(--forge-border);
+    --input: var(--forge-border);
+    --ring: var(--forge-neon-blue);
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Dark theme uses same values for cybernetic aesthetic */
+    --background: var(--forge-void);
+    --foreground: var(--forge-text-primary);
+    --card: var(--forge-surface);
+    --card-foreground: var(--forge-text-primary);
+    --popover: var(--forge-surface);
+    --popover-foreground: var(--forge-text-primary);
+    --primary: var(--forge-neon-blue);
+    --primary-foreground: var(--forge-void);
+    --secondary: var(--forge-surface);
+    --secondary-foreground: var(--forge-text-primary);
+    --muted: var(--forge-border);
+    --muted-foreground: var(--forge-text-muted);
+    --accent: var(--forge-neon-purple);
+    --accent-foreground: var(--forge-text-primary);
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: var(--forge-text-primary);
+    --border: var(--forge-border);
+    --input: var(--forge-border);
+    --ring: var(--forge-neon-blue);
+  }
+}
+
+@layer base {
+  * {
+    border-color:hsl(var(--border));
+  }
+
+  html {
+    @apply dark; /* Force dark mode for cybernetic aesthetic */
+  }
+
+  body {
+    @apply bg-background text-foreground font-space-grotesk;
+    background: hsl(var(--forge-void));
+    color: hsl(var(--forge-text-primary));
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-orbitron;
+  }
+}
+
+@layer components {
+  /* Neon Glow Effects */
+  .neon-glow-blue {
+    box-shadow: 
+      0 0 5px hsl(var(--forge-neon-blue) / 0.5),
+      0 0 20px hsl(var(--forge-neon-blue) / 0.3),
+      0 0 35px hsl(var(--forge-neon-blue) / 0.1);
+  }
+
+  .neon-glow-purple {
+    box-shadow: 
+      0 0 5px hsl(var(--forge-neon-purple) / 0.5),
+      0 0 20px hsl(var(--forge-neon-purple) / 0.3),
+      0 0 35px hsl(var(--forge-neon-purple) / 0.1);
+  }
+
+  .text-glow-blue {
+    text-shadow: 
+      0 0 5px hsl(var(--forge-neon-blue) / 0.8),
+      0 0 15px hsl(var(--forge-neon-blue) / 0.5),
+      0 0 25px hsl(var(--forge-neon-blue) / 0.3);
+  }
+
+  .text-glow-purple {
+    text-shadow: 
+      0 0 5px hsl(var(--forge-neon-purple) / 0.8),
+      0 0 15px hsl(var(--forge-neon-purple) / 0.5),
+      0 0 25px hsl(var(--forge-neon-purple) / 0.3);
+  }
+
+  /* Forge Container */
+  .forge-container {
+    @apply bg-card border border-border rounded-lg p-6;
+    background: var(--forge-gradient-surface);
+    border: 1px solid hsl(var(--forge-border));
+    backdrop-filter: blur(10px);
+  }
+
+  .forge-container-glow {
+    @apply forge-container neon-glow-blue;
+  }
+
+  /* Hexagonal Slot Styling */
+  .hex-slot {
+    aspect-ratio: 1;
+    clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%);
+    @apply bg-card border-2 border-border flex items-center justify-center transition-all duration-300;
+  }
+
+  .hex-slot:hover {
+    @apply border-primary neon-glow-blue;
+  }
+
+  .hex-slot.active {
+    @apply border-primary neon-glow-blue;
+  }
+
+  /* Circuit Pattern Background */
+  .circuit-bg {
+    background-image: 
+      radial-gradient(circle at 25% 25%, hsl(var(--forge-neon-blue) / 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, hsl(var(--forge-neon-purple) / 0.1) 0%, transparent 50%),
+      linear-gradient(45deg, transparent 40%, hsl(var(--forge-border)) 40.5%, hsl(var(--forge-border)) 41%, transparent 41.5%),
+      linear-gradient(-45deg, transparent 40%, hsl(var(--forge-border)) 40.5%, hsl(var(--forge-border)) 41%, transparent 41.5%);
+    background-size: 60px 60px, 80px 80px, 20px 20px, 20px 20px;
+    animation: circuit-pulse 10s ease-in-out infinite;
+  }
+
+  /* Floating Particles */
+  .particles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .particle {
+    position: absolute;
+    background: hsl(var(--forge-neon-blue) / 0.6);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .particle:nth-child(2n) {
+    background: hsl(var(--forge-neon-purple) / 0.4);
+    animation-delay: -2s;
+    animation-duration: 8s;
+  }
+
+  .particle:nth-child(3n) {
+    animation-delay: -4s;
+    animation-duration: 10s;
+  }
+
+  /* Pulse Animation */
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes circuit-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 
+      0 0 5px hsl(var(--forge-neon-blue) / 0.5),
+      0 0 20px hsl(var(--forge-neon-blue) / 0.3);
+  }
+  50% {
+    box-shadow: 
+      0 0 10px hsl(var(--forge-neon-blue) / 0.8),
+      0 0 30px hsl(var(--forge-neon-blue) / 0.5),
+      0 0 50px hsl(var(--forge-neon-blue) / 0.2);
+  }
+}
+
+@keyframes neon-flicker {
+  0%, 100% { opacity: 1; }
+  2%, 8%, 12%, 18%, 22%, 28% { opacity: 0.8; }
+  4%, 6%, 14%, 16%, 24%, 26% { opacity: 1; }
+  10%, 20% { opacity: 0.9; }
+}
+
+/* Scroll customization */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--forge-void));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--forge-border));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--forge-neon-blue) / 0.7);
+}
