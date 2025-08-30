@@ -51,7 +51,8 @@ const zetachainAthensTestnet = {
   testnet: true,
 } as const;
 
-const PINATA_JWT = process.env.PINATA_JWT;
+const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT;
+
 
 // Pinata JWT token - Replace with your actual token
 
