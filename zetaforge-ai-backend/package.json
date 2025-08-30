@@ -1,0 +1,31 @@
+{
+  "name": "zetaforge-ai-backend",
+  "version": "2.1.0",
+  "description": "ZetaForge AI-powered NFT generation backend using Google Cloud Vertex AI",
+  "main": "index.js",
+  "engines": {
+    "node": "18"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.3.0",
+    "google-auth-library": "^9.6.3",
+    "axios": "^1.6.8",
+    "cors": "^2.8.5",
+    "form-data": "^4.0.0"
+  },
+  "scripts": {
+    "start": "functions-framework --target=generateAndPinImage --port=8080",
+    "test": "functions-framework --target=generateAndPinImage --port=8080",
+    "deploy": "gcloud functions deploy generateAndPinImage --runtime nodejs18 --trigger-http --allow-unauthenticated --memory 1GB --timeout 540s"
+  },
+  "keywords": [
+    "zetaforge",
+    "nft",
+    "ai",
+    "vertex-ai",
+    "google-cloud",
+    "blockchain"
+  ],
+  "author": "ZetaForge Team",
+  "license": "MIT"
+}
