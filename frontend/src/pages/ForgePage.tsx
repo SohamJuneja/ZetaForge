@@ -53,6 +53,8 @@ const zetachainAthensTestnet = {
 } as const;
 
 const PINATA_JWT = import.meta.env.VITE_PINATA_JWT;
+console.log("Pinata JWT prefix:", PINATA_JWT?.slice(0, 30), "length:", PINATA_JWT?.length);
+
 
 
 // Pinata JWT token - Replace with your actual token
