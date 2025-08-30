@@ -1,13 +1,14 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink, Share2, ArrowLeft } from 'lucide-react';
-import Header from '@/components/Header';
-import AnimatedBackground from '@/components/AnimatedBackground';
-import ForgeButton from '@/components/ForgeButton';
-import { Button } from '@/components/ui/button';
+import Header from '../components/Header';
+import AnimatedBackground from '../components/AnimatedBackground';
+import ForgeButton from '../components/ForgeButton';
+import { Button } from '../components/ui/button';
 import { useAccount } from 'wagmi';
-
-
+import { useParams } from 'react-router-dom';
+import { useContractRead } from 'wagmi';
+import { zetaForgeContractAddress, zetaForgeContractABI } from '../lib/contracts';
 
 // Mock data for the newly created NFT
 const newCreation = {
@@ -24,9 +25,6 @@ const newCreation = {
 };
 
 // Mock past creations
-
-
-
 const pastCreations = [
   {
     id: 'zeta-002',
@@ -51,11 +49,53 @@ const pastCreations = [
 ];
 
 const GalleryPage = () => {
+  // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONS OR RETURNS
+  const { tokenId } = useParams();
   const navigate = useNavigate();
+  const { address, isConnected } = useAccount();
 
-  const handleViewOnZetaScan = () => {
-    window.open('https://zetachain.blockscout.com/', '_blank');
+  // Fetch the image URL for that tokenId from the smart contract
+  const { data: imageUrl, isLoading, isError } = useContractRead({
+    address: zetaForgeContractAddress,
+    abi: zetaForgeContractABI,
+    functionName: 'tokenURI',
+    args: tokenId ? [tokenId] : undefined,
+    enabled: !!tokenId, // Only run if tokenId exists
+  });
+
+  // NOW we can have conditional rendering after all hooks are called
+  if (isLoading) {
+    return (
+      <div className="min-h-screen relative">
+        <AnimatedBackground />
+        <Header isConnected={isConnected} walletAddress={address || ""} />
+        <div className="text-white text-center pt-48">
+          Loading your new creation from the blockchain...
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !imageUrl) {
+    return (
+      <div className="min-h-screen relative">
+        <AnimatedBackground />
+        <Header isConnected={isConnected} walletAddress={address || ""} />
+        <div className="text-red-500 text-center pt-48">
+          Error loading your NFT from the blockchain.
+        </div>
+      </div>
+    );
+  }
+
+  const handleViewOnZetaScan = (tokenId: number) => {
+    const CONTRACT_ADDRESS = '0x3882f8b2246e758551653748e0B9a4a33BC69008';
+    const url = `https://zetachain-testnet.blockscout.com/token/${CONTRACT_ADDRESS}/instance/${tokenId}`;
+    window.open(url, '_blank');
   };
+  
+  
+    
 
   const handleShareOnX = () => {
     const text = `Just forged "${newCreation.name}" on @ZetaForge! 🔥⚡ #ZetaForge #NFT #Web3`;
@@ -69,15 +109,12 @@ const GalleryPage = () => {
   const handleBackToPortal = () => {
     navigate('/');
   };
-  const { address, isConnected } = useAccount();
-
 
   return (
     <div className="min-h-screen relative">
       <AnimatedBackground />
       <Header isConnected={isConnected} walletAddress={address || ""} />
 
-      
       <main className="container mx-auto px-6 pt-24 pb-12">
         {/* Back button */}
         <motion.div
@@ -126,8 +163,8 @@ const GalleryPage = () => {
               >
                 <div className="aspect-square rounded-lg overflow-hidden neon-glow-blue">
                   <img 
-                    src={newCreation.image} 
-                    alt={newCreation.name}
+                    src={imageUrl as string} 
+                    alt={`ZetaForge Creation #${tokenId}`}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -145,53 +182,89 @@ const GalleryPage = () => {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-3xl font-orbitron font-bold text-forge-neon-blue mb-2">
-                    {newCreation.name}
+                    ZetaForge Creation #{tokenId}
                   </h2>
                   <p className="text-forge-text-secondary">
-                    ZetaForge Creation #{newCreation.id}
+                    Token ID: {tokenId}
                   </p>
                 </div>
 
                 <p className="text-forge-text-muted leading-relaxed">
-                  {newCreation.description}
+                  A unique NFT forged through the ZetaForge platform using AI-powered image generation.
                 </p>
 
                 {/* Traits */}
                 <div className="space-y-3">
                   <h3 className="font-orbitron font-semibold text-forge-neon-purple">
-                    Traits
+                    Details
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {newCreation.traits.map((trait, index) => (
-                      <motion.div
-                        key={trait.trait}
-                        className="bg-forge-surface border border-forge-border rounded-lg p-3"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.8 + index * 0.1 }}
-                      >
-                        <p className="text-xs text-forge-text-muted mb-1">
-                          {trait.trait}
-                        </p>
-                        <p className="font-medium text-forge-text-primary">
-                          {trait.value}
-                        </p>
-                      </motion.div>
-                    ))}
+                    <motion.div
+                      className="bg-forge-surface border border-forge-border rounded-lg p-3"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8 }}
+                    >
+                      <p className="text-xs text-forge-text-muted mb-1">
+                        Token ID
+                      </p>
+                      <p className="font-medium text-forge-text-primary">
+                        #{tokenId}
+                      </p>
+                    </motion.div>
+                    <motion.div
+                      className="bg-forge-surface border border-forge-border rounded-lg p-3"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.9 }}
+                    >
+                      <p className="text-xs text-forge-text-muted mb-1">
+                        Chain
+                      </p>
+                      <p className="font-medium text-forge-text-primary">
+                        ZetaChain
+                      </p>
+                    </motion.div>
+                    <motion.div
+                      className="bg-forge-surface border border-forge-border rounded-lg p-3"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.0 }}
+                    >
+                      <p className="text-xs text-forge-text-muted mb-1">
+                        Type
+                      </p>
+                      <p className="font-medium text-forge-text-primary">
+                        AI Generated
+                      </p>
+                    </motion.div>
+                    <motion.div
+                      className="bg-forge-surface border border-forge-border rounded-lg p-3"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.1 }}
+                    >
+                      <p className="text-xs text-forge-text-muted mb-1">
+                        Status
+                      </p>
+                      <p className="font-medium text-forge-text-primary">
+                        Minted
+                      </p>
+                    </motion.div>
                   </div>
                 </div>
 
                 {/* Action buttons */}
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Button
-                    onClick={handleViewOnZetaScan}
-                    variant="outline"
-                    className="flex-1 bg-transparent border-forge-neon-blue text-forge-neon-blue 
-                              hover:bg-forge-neon-blue/10 neon-glow-blue"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View on ZetaScan
-                  </Button>
+                <Button
+  onClick={() => handleViewOnZetaScan(Number(tokenId))}
+  variant="outline"
+  className="flex-1 bg-transparent border-forge-neon-blue text-forge-neon-blue hover:bg-forge-neon-blue/10 neon-glow-blue"
+>
+  <ExternalLink className="w-4 h-4 mr-2" />
+  View on ZetaScan
+</Button>
+
                   
                   <Button
                     onClick={handleShareOnX}

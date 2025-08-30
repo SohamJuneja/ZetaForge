@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@zetachain/protocol-contracts/contracts/zevm/interfaces/UniversalContract.sol";
 
-contract ZetaForge is UniversalContract, ERC721 {
+// Inherit from ERC721URIStorage
+contract ZetaForge is UniversalContract, ERC721URIStorage {
     address public owner;
     uint256 public nftIdCounter;
 
@@ -18,22 +19,21 @@ contract ZetaForge is UniversalContract, ERC721 {
         uint256 amount,
         bytes calldata message
     ) external virtual override {
-        // --- THIS IS THE CORRECTED LINE ---
-        // We get the sender's address from context.sender and convert it from 'bytes' to 'address'.
-        // abi.decode is the standard, safe way to perform this conversion.
-        forgeNFT(abi.decode(context.sender, (address)));
-        // ------------------------------------
+        address recipient = abi.decode(context.sender, (address));
+        forgeNFT(recipient, ""); // Mint with an empty URI for cross-chain calls
     }
 
-    function forgeNFT(address recipient) internal {
+    function forgeNFT(address recipient, string memory tokenURI) internal {
         uint256 newItemId = nftIdCounter;
         _safeMint(recipient, newItemId);
+        _setTokenURI(newItemId, tokenURI);
         nftIdCounter = nftIdCounter + 1;
     }
-    function mint() external {
-        // msg.sender is always the address that called the function.
-        // This is secure and direct.
-        forgeNFT(msg.sender);
-    }
 
+    function mint(string memory tokenURI) external {
+        forgeNFT(msg.sender, tokenURI);
+    }
+    
+    // The _burn and tokenURI functions have been removed.
+    // We will now inherit them directly from ERC721URIStorage.
 }

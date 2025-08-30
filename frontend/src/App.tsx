@@ -19,7 +19,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<PortalPage />} />
           <Route path="/forge" element={<ForgePage />} />
-          <Route path="/gallery" element={<GalleryPage />} />
+          <Route path="/gallery/:tokenId" element={<GalleryPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -11,6 +11,8 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchCh
 import { getNftsForOwner } from '../lib/alchemy';
 import { zetaForgeContractAddress, zetaForgeContractABI } from '../lib/contracts';
 import { toHex } from 'viem';
+import { useConfig } from 'wagmi';
+import { parseAbiItem, decodeEventLog } from 'viem';
 
 // TypeScript declaration for ethereum object
 declare global {
@@ -48,6 +50,11 @@ const zetachainAthensTestnet = {
   },
   testnet: true,
 } as const;
+
+const PINATA_JWT = process.env.PINATA_JWT;
+
+// Pinata JWT token - Replace with your actual token
+
 
 interface NFT {
   id: string;
@@ -90,12 +97,114 @@ const mockNFTs: NFT[] = [
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+// Helper function to enhance prompt for better AI generation
+const styles = ["vaporwave", "glitch", "neon noir", "cyberpunk fantasy", "sci-fi surreal"];
+const colors = ["glowing", "fiery", "holographic", "metallic", "iridescent"];
+
+const enhancePrompt = (userPrompt: string, selectedNFTs: (NFT | undefined)[]): string => {
+  const cleanPrompt = userPrompt.replace(/[^\w\s,.-]/g, '').trim();
+  const styleToken = styles[Math.floor(Math.random() * styles.length)];
+  const colorToken = colors[Math.floor(Math.random() * colors.length)];
+
+  const nftTraits = selectedNFTs
+    .map(nft => nft?.name)
+    .filter(Boolean)
+    .join(', ');
+
+  const baseEnhancement = `Create a high-quality NFT artwork. `;
+  const styleGuide = `Style: Cyberpunk, futuristic, neon colors, ${styleToken}, ${colorToken}. `;
+  const qualityGuide = `Requirements: Highly detailed, 1:1 aspect ratio, professional quality. `;
+
+  return `${baseEnhancement}${styleGuide}${qualityGuide}Description: ${cleanPrompt}${nftTraits ? ` | Based on NFTs: ${nftTraits}` : ''}`;
+};
+
+// Helper function to download image from URL with retry logic
+const downloadImage = async (imageUrl: string, maxRetries: number = 3): Promise<Blob> => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Attempt ${attempt} to download image from:`, imageUrl);
+      
+      const response = await fetch(imageUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'image/*',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      
+      // Verify it's actually an image
+      if (!blob.type.startsWith('image/')) {
+        throw new Error(`Invalid content type: ${blob.type}`);
+      }
+      
+      return blob;
+    } catch (error) {
+      console.error(`Download attempt ${attempt} failed:`, error);
+      
+      if (attempt === maxRetries) {
+        throw new Error(`Failed to download image after ${maxRetries} attempts: ${error.message}`);
+      }
+      
+      // Wait before retry (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+    }
+  }
+  
+  throw new Error('Unexpected error in download retry loop');
+};
+
+// Helper function to upload image to Pinata IPFS
+const uploadToPinata = async (imageBlob: Blob, filename: string = 'forged-nft.png'): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', imageBlob, filename);
+  
+  const pinataMetadata = JSON.stringify({
+    name: filename,
+    keyvalues: {
+      service: 'zetaforge',
+      type: 'generated-art'
+    }
+  });
+  formData.append('pinataMetadata', pinataMetadata);
+
+  const pinataOptions = JSON.stringify({
+    cidVersion: 0,
+  });
+  formData.append('pinataOptions', pinataOptions);
+
+  
+
+
+  const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${PINATA_JWT}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Pinata upload failed: ${response.statusText} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+};
+
 const ForgingAnimation = ({
   isVisible,
   onComplete,
+  status = "FORGING..."
 }: {
   isVisible: boolean;
   onComplete: () => void;
+  status?: string;
 }) => (
   <AnimatePresence>
     {isVisible && (
@@ -144,7 +253,7 @@ const ForgingAnimation = ({
               transition={{ delay: 1 }}
             >
               <h2 className="text-4xl font-orbitron font-bold text-glow-blue">
-                FORGING...
+                {status}
               </h2>
             </motion.div>
             <motion.div
@@ -162,12 +271,14 @@ const ForgingAnimation = ({
 
 const ForgePage = () => {
   const navigate = useNavigate();
-
+  const [newTokenId, setNewTokenId] = useState<string | null>(null);
   // State management
   const [selectedNFTs, setSelectedNFTs] = useState<(NFT | undefined)[]>([undefined, undefined]);
   const [prompt, setPrompt] = useState('');
   const [showNFTModal, setShowNFTModal] = useState<number | null>(null);
   const [isForging, setIsForging] = useState(false);
+  const [forgingStatus, setForgingStatus] = useState("FORGING...");
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
 
   // Wagmi hooks
   const { address, isConnected, chain } = useAccount();
@@ -267,7 +378,6 @@ const ForgePage = () => {
                    prompt.trim().length > 0 && 
                    isConnected && 
                    !isForgingInProgress;
-                   // Removed network check temporarily for debugging
 
   // NFT selection
   const handleNFTSelect = (nft: NFT) => {
@@ -279,96 +389,157 @@ const ForgePage = () => {
     }
   };
 
-  // Main contract transaction logic
+  // Updated handleForge function with better error handling and fallbacks
   const handleForge = async () => {
+    if (!isConnected || !address || !prompt || !selectedNFTs[0] || !selectedNFTs[1]) {
+      alert("Please connect wallet, select both NFTs, and enter a prompt.");
+      return;
+    }
+
+    if (PINATA_JWT === "YOUR_PINATA_JWT_HERE") {
+      alert("Please configure your Pinata JWT token first!");
+      return;
+    }
+
+    setIsForging(true);
+    setForgingStatus("GENERATING IMAGE...");
+
     try {
-      if (!isConnected || !address) {
-        alert("Please connect your wallet first.");
-        return;
-      }
-  
-      if (!selectedNFTs[0] || !selectedNFTs[1]) {
-        alert("Please select both NFTs before forging.");
-        return;
-      }
-  
-      if (!prompt.trim()) {
-        alert("Please enter a description for the transformation.");
-        return;
-      }
-  
-      // Check MetaMask network directly
-      if (window.ethereum) {
-        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-        const currentChainId = parseInt(chainId, 16);
-        console.log('Current MetaMask chain ID:', currentChainId);
-  
-        if (currentChainId !== 7001) {
-          alert(`Please switch to ZetaChain Testnet in MetaMask. Current: ${currentChainId}, Required: 7001`);
-          return;
-        }
-      }
-  
-      setIsForging(true);
-  
-      const message = `Forge: ${selectedNFTs[0]?.name} + ${selectedNFTs[1]?.name}. Prompt: ${prompt}`;
-  
-      console.log("=== FORGE TRANSACTION DEBUG ===");
-      console.log("Contract Address:", zetaForgeContractAddress);
-      console.log("Message:", message);
-      console.log("Message (hex):", toHex(message));
-      console.log("Sender:", address);
-      console.log("Contract ABI:", zetaForgeContractABI);
-  
-      // Check if contract exists at the address
-      if (window.ethereum) {
+      console.log("🎨 Starting image generation process...");
+      const nft1_name = selectedNFTs[0]?.name || 'a mysterious cybernetic entity';
+      const nft2_name = selectedNFTs[1]?.name || 'a powerful digital spirit';
+      const userPrompt = prompt;
+
+      // Step 1: Enhance and clean the prompt
+      const enhancedPrompt = `A cinematic, high-detail digital art fusion of a "${nft1_name}" and a "${nft2_name}", reimagined in the style of: ${userPrompt}`;
+
+      console.log("Enhanced prompt:", enhancedPrompt);
+      
+      // Step 2: Try multiple Pollinations endpoints/approaches
+      setForgingStatus("CREATING DIGITAL ART...");
+      
+      let imageBlob: Blob | null = null;
+      const promptVariations = [
+        enhancedPrompt,
+        enhancedPrompt.replace(/[^a-zA-Z0-9\s]/g, ''), // Remove all special characters
+        prompt.replace(/[^a-zA-Z0-9\s]/g, ''), // Use original prompt without special chars
+        "digital fantasy art" // Fallback simple prompt
+      ];
+      
+      for (let i = 0; i < promptVariations.length; i++) {
+        const currentPrompt = promptVariations[i];
+        console.log(`Trying prompt variation ${i + 1}:`, currentPrompt);
+        
         try {
-          const code = await window.ethereum.request({
-            method: 'eth_getCode',
-            params: [zetaForgeContractAddress, 'latest']
-          });
-          console.log("Contract code at address:", code);
-          if (code === '0x' || code === '0x0') {
-            alert(`No contract found at address ${zetaForgeContractAddress}. Please check the contract address.`);
-            setIsForging(false);
-            return;
+          // Use different Pollinations URL formats
+          const urlVariations = [
+            `https://image.pollinations.ai/prompt/${encodeURIComponent(currentPrompt)}`,
+            `https://pollinations.ai/p/${encodeURIComponent(currentPrompt)}`,
+            `https://image.pollinations.ai/prompt/${encodeURIComponent(currentPrompt)}?width=512&height=512`,
+          ];
+          
+          for (const url of urlVariations) {
+            try {
+              console.log("Trying URL:", url);
+              imageBlob = await downloadImage(url, 2); // 2 retries per URL
+              if (imageBlob) {
+                console.log("✅ Successfully generated image with variation:", currentPrompt);
+                break;
+              }
+            } catch (urlError) {
+              console.log("URL failed:", url, urlError.message);
+              continue;
+            }
           }
-        } catch (codeError) {
-          console.warn("Could not check contract code:", codeError);
+          
+          if (imageBlob) break; // Success, exit prompt variations loop
+          
+        } catch (promptError) {
+          console.log(`Prompt variation ${i + 1} failed:`, promptError.message);
+          continue;
         }
       }
-  
-      // ✅ Call the new mint() function (no args)
-      await writeContract({
+      
+      if (!imageBlob) {
+        throw new Error("All image generation attempts failed. Please try a simpler prompt or try again later.");
+      }
+      
+      console.log("Image generated successfully, size:", imageBlob.size);
+      
+      // Step 3: Upload to Pinata IPFS
+      setForgingStatus("UPLOADING TO IPFS...");
+      const timestamp = Date.now();
+      const filename = `forged-nft-${timestamp}.png`;
+      const ipfsUrl = await uploadToPinata(imageBlob, filename);
+      console.log("Image uploaded to IPFS:", ipfsUrl);
+      
+      setGeneratedImageUrl(ipfsUrl);
+      
+      // Step 4: Mint NFT with the IPFS URL
+      setForgingStatus("MINTING NFT...");
+      console.log("Calling mint function with IPFS URL:", ipfsUrl);
+      
+      writeContract({
         address: zetaForgeContractAddress,
         abi: zetaForgeContractABI,
         functionName: 'mint',
-        args: [],            // no arguments needed
-        gas: 200000n,        // enough for ERC721 mint
-        chainId: 7001,
+        args: [ipfsUrl],
+        gas: 500000n,
       });
-  
-      setIsForging(false);
-  
+
     } catch (error: any) {
-      console.error("=== FORGE ERROR ===");
-      console.error("Error details:", error);
-      console.error("Error message:", error.message);
-      console.error("Error code:", error.code);
-      console.error("Error data:", error.data);
+      console.error("❌ Forging process failed:", error);
       setIsForging(false);
-  
-      // Better error messages
-      if (error.message?.includes('execution reverted')) {
-        alert(`Contract execution failed. Check if:\n1. Contract address is correct\n2. You have enough ZETA for gas\n3. Contract function exists\n\nError: ${error.message}`);
-      } else if (error.message?.includes('insufficient funds')) {
-        alert('Insufficient funds for gas. Please get some ZETA from the faucet.');
+      setForgingStatus("FORGING...");
+      
+      // Provide more specific error messages
+      if (error.message.includes('All image generation attempts failed')) {
+        alert("Image generation failed. Please try:\n• A simpler prompt\n• Removing special characters\n• Trying again in a few minutes");
+      } else if (error.message.includes('Pinata upload failed')) {
+        alert(`Failed to upload image to IPFS: ${error.message}`);
       } else {
-        alert(`Transaction error: ${error.message || 'Unknown error'}`);
+        alert(`Forging failed: ${error.message}`);
       }
     }
   };
-  
+
+  // This hook automatically waits for the transaction to complete
+  const { data: receipt } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  // This `useEffect` runs when the transaction is successfully confirmed
+  useEffect(() => {
+    if (receipt) {
+      console.log("Transaction confirmed!", receipt);
+      const eventTopic = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)');
+      const log = receipt.logs.find(
+        l => l.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+      );
+      if (log) {
+        const decodedLog = decodeEventLog({ abi: [eventTopic], data: log.data, topics: log.topics });
+        const tokenId = decodedLog.args.tokenId.toString();
+        console.log("SUCCESS! New NFT minted with tokenId:", tokenId);
+        setNewTokenId(tokenId);
+        // Navigate to the gallery with the new ID
+        navigate(`/gallery/${tokenId}`);
+      } else {
+        console.error("Could not find Transfer event in transaction receipt.");
+        alert("Minting succeeded, but could not get Token ID. Please check your gallery manually.");
+      }
+    }
+  }, [receipt, navigate]);
+
+  // Update the loading state for the UI
+  useEffect(() => {
+    if (isPending) {
+      setForgingStatus("CONFIRMING TRANSACTION...");
+    } else if (isConfirming) {
+      setForgingStatus("PROCESSING ON BLOCKCHAIN...");
+    }
+    
+    setIsForging(isPending || isConfirming);
+  }, [isPending, isConfirming]);
 
   // Fetch NFTs when user connects
   useEffect(() => {
@@ -418,10 +589,9 @@ const ForgePage = () => {
       console.log("✅ Transaction confirmed:", hash);
       console.log("View on explorer: https://explorer.athens2.zetachain.com/tx/" + hash);
       setIsForging(false);
+      setForgingStatus("FORGING...");
       // Don't navigate immediately, let the animation complete
-      setTimeout(() => {
-        navigate('/gallery');
-      }, 2000); // Give time for the forging animation
+       // Give time for the forging animation
     }
     
     if (writeError) {
@@ -432,12 +602,14 @@ const ForgePage = () => {
         name: writeError.name,
       });
       setIsForging(false);
+      setForgingStatus("FORGING...");
       alert(`Transaction Error: ${writeError.message}\n\nCheck console for details.`);
     }
     
     if (receiptError) {
       console.error("❌ Receipt error:", receiptError);
       setIsForging(false);
+      setForgingStatus("FORGING...");
       alert(`Transaction failed on blockchain: ${receiptError.message}`);
     }
   }, [isConfirmed, writeError, receiptError, hash, navigate]);
@@ -507,6 +679,22 @@ const ForgePage = () => {
           </motion.div>
         )}
 
+        {/* Pinata JWT Warning */}
+        {PINATA_JWT === "YOUR_PINATA_JWT_HERE" && (
+          <motion.div
+            className="max-w-4xl mx-auto mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="bg-red-900/50 border border-red-600 rounded-lg p-4 text-center">
+              <p className="text-red-200 font-medium mb-2">⚠️ Configuration Required</p>
+              <p className="text-sm text-red-300">
+                Please replace "YOUR_PINATA_JWT_HERE" with your actual Pinata JWT token to enable IPFS uploads.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
           {/* Left Column - Materials */}
           <motion.div
@@ -568,10 +756,7 @@ const ForgePage = () => {
                   disabled={!canForge}
                   className="w-full text-2xl py-6"
                 >
-                  {isSwitchingChain ? 'SWITCHING NETWORK...' :
-                   isPending ? 'CONFIRMING...' :
-                   isConfirming ? 'PROCESSING...' :
-                   isForging ? 'FORGING...' : 'FORGE'}
+                  {forgingStatus}
                 </ForgeButton>
                 
                 {/* Transaction status */}
@@ -589,6 +774,18 @@ const ForgePage = () => {
                     {isConfirmed && (
                       <p className="text-green-400">Transaction confirmed!</p>
                     )}
+                  </div>
+                )}
+
+                {/* Show generated image preview */}
+                {generatedImageUrl && (
+                  <div className="mt-4">
+                    <p className="text-sm text-forge-neon-blue mb-2">Generated Image:</p>
+                    <img 
+                      src={generatedImageUrl} 
+                      alt="Generated NFT" 
+                      className="w-32 h-32 object-cover rounded-lg mx-auto border border-forge-neon-blue"
+                    />
                   </div>
                 )}
               </div>
@@ -646,12 +843,14 @@ const ForgePage = () => {
 
       {/* Forging Animation */}
       <ForgingAnimation 
-        isVisible={isForgingInProgress && (isPending || isConfirming)} 
+        isVisible={isForgingInProgress} 
+        status={forgingStatus}
         onComplete={() => {
-          if (isConfirmed) {
-            navigate('/gallery');
+          if (isConfirmed && newTokenId) {
+            setIsForging(false);
           }
-        }} 
+        }}
+        
       />
     </div>
   );
