@@ -11,7 +11,7 @@ export const zetaForgeContractABI = [
   {
     "inputs": [
       {
-        "internalType": "address",
+        "internalType": "adsdress",
         "name": "sender",
         "type": "address"
       },

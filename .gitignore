@@ -20,3 +20,4 @@ access_token
 localnet.json
 
 test-ledger
+.env.local

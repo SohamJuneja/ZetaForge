@@ -1,8 +1,7 @@
 // src/lib/alchemy.ts
 import axios from "axios";
 
-const ALCHEMY_API_KEY = import.meta.env.VITE_ALCHEMY_API_KEY;
-
+const ALCHEMY_API_KEY = "seu5ukdPC7m9A_AJMM2Bo";
 
 // Base Sepolia endpoint
 const BASE_URL = `https://base-sepolia.g.alchemy.com/nft/v2/${ALCHEMY_API_KEY}`;

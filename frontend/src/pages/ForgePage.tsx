@@ -12,6 +12,7 @@ import { getNftsForOwner } from '../lib/alchemy';
 import { zetaForgeContractAddress, zetaForgeContractABI } from '../lib/contracts';
 import { toHex } from 'viem';
 import { useConfig } from 'wagmi';
+import { useContractRead } from "wagmi";
 import { parseAbiItem, decodeEventLog } from 'viem';
 
 // TypeScript declaration for ethereum object
@@ -51,7 +52,7 @@ const zetachainAthensTestnet = {
   testnet: true,
 } as const;
 
-const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT;
+const PINATA_JWT = import.meta.env.VITE_PINATA_JWT;
 
 
 // Pinata JWT token - Replace with your actual token
