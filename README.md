@@ -281,21 +281,21 @@ journey
 - ✅ IPFS storage integration
 - ✅ Mobile-optimized UI
 
-### **🚀 Phase 2: Advanced Fusion (Q2 2025)**
+### **🚀 Phase 2: Advanced Fusion **
 - 🔲 Image-to-Image AI fusion (visual trait blending)
 - 🔲 Cross-chain NFT reading (Ethereum, Polygon, etc.)
 - 🔲 Batch forging capabilities
 - 🔲 Advanced trait extraction and analysis
 - 🔲 Community governance token
 
-### **🌍 Phase 3: Omnichain Expansion (Q3 2025)**
+### **🌍 Phase 3: Omnichain Expansion **
 - 🔲 Multi-chain deployment via ZetaChain
 - 🔲 NFT locking mechanism (burn-to-forge)
 - 🔲 Dynamic metadata evolution
 - 🔲 Cross-chain royalty distribution
 - 🔲 Forge marketplace integration
 
-### **🏆 Phase 4: Creative Economy (Q4 2025)**
+### **🏆 Phase 4: Creative Economy **
 - 🔲 AI lore generation for each NFT
 - 🔲 Collaborative forging (multi-user)
 - 🔲 Rarity prediction algorithms
