@@ -8,7 +8,7 @@ import { Button } from '../components/ui/button';
 import { useAccount } from 'wagmi';
 import { useParams } from 'react-router-dom';
 import { useContractRead } from 'wagmi';
-import { zetaForgeContractAddress, zetaForgeContractABI } from '../../src/lib/contracts'
+import { zetaForgeContractAddress, zetaForgeContractABI } from '../lib/contracts'
 
 // Mock data for the newly created NFT
 const newCreation = {
