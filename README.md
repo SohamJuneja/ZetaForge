@@ -19,7 +19,7 @@
 
 ## 🚀 **Live Demo & Proof of Excellence**
 
-* 🌐 **Experience the Magic:** `[LIVE DEPLOYED APP - VERCEL]`
+* 🌐 **Experience the Magic:** `[https://zeta-forge.vercel.app/]`
 * 📱 **Mobile Optimized:** Fully responsive design for seamless mobile forging
 * ⚡ **Lightning Fast:** Sub-3 second NFT generation and minting
 * 🔗 **Testnet Ready:** Deployed on ZetaChain Athens 3 Testnet
