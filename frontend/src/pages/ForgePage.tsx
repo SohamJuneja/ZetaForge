@@ -818,8 +818,8 @@ const ForgePage = () => {
             </div>
           ) : null}
           
-          <div className="grid grid-cols-2 gap-4">
-            {(userNfts.length > 0 ? userNfts : mockNFTs).map((nft) => (
+          <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-forge-neon-blue scrollbar-track-forge-border">
+          {[...userNfts,...mockNFTs ].map((nft) => (
               <motion.div
                 key={nft.id}
                 className="forge-container p-4 cursor-pointer hover:bg-forge-border/50 transition-colors"
